@@ -8,3 +8,8 @@
 /detlog.txt
 /Assets/Shaders/VK/*.spv
 /Assets/Shaders/MTL/*.metallib
+bin
+bin-int
+JoltPhysics.vcxproj
+JoltPhysics.vcxproj.filters
+JoltPhysics.vcxproj.user
