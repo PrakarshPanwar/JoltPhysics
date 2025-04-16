@@ -14,6 +14,8 @@ project "JoltPhysics"
 		"%{prj.location}"
     }
 
+	defines { "JPH_DEBUG_RENDERER" }
+
     filter "system:windows"
 		systemversion "latest"
 		cppdialect "C++20"
