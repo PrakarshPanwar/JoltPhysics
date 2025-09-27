@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
-project(JoltPhysics VERSION 5.3.1 LANGUAGES CXX)
+project(JoltPhysics VERSION 5.4.0 LANGUAGES CXX)
 
 # When turning this option on, the library will be compiled using assertions. By default asserts are enabled in Debug build.
 option(USE_ASSERTS "Enable asserts" OFF)
@@ -91,6 +91,11 @@ option(PROFILER_IN_DEBUG_AND_RELEASE "Enable the profiler in Debug and Release b
 # Enable the profiler in all builds.
 # Note that enabling this reduces the performance of the library.
 option(PROFILER_IN_DISTRIBUTION "Enable the profiler in all builds" OFF)
+
+# Ability to use the external profiler using CMake config. Defines preprocessor JPH_EXTERNAL_PROFILE.
+# Use external profiler set using ProfileStartMeasurement and ProfileEndMeasurement to profile.
+# Option is available only when profiling is enabled using PROFILER_IN_DEBUG_AND_RELEASE or PROFILER_IN_DISTRIBUTION.
+option(JPH_USE_EXTERNAL_PROFILE "Use external profiler when profiling is enabled" OFF)
 
 # Setting this option will force the library to use malloc/free instead of allowing the user to override the memory allocator
 option(DISABLE_CUSTOM_ALLOCATOR "Disable support for a custom memory allocator" OFF)
@@ -233,12 +238,12 @@ else()
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffp-model=precise")
 
 		# On clang 14 and later we can turn off float contraction through a pragma, older versions and deterministic versions need it off always, see Core.h
-		if (CMAKE_CXX_COMPILER_VERSION LESS 14 OR CROSS_PLATFORM_DETERMINISTIC)
+		# clang on LoongArch does not support such pragma, also turn off contraction for it.
+		if (CMAKE_CXX_COMPILER_VERSION LESS 14 OR CROSS_PLATFORM_DETERMINISTIC OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "loongarch")
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffp-contract=off")
 
-			# emcc complains with: warning: overriding '-ffp-model=precise' option with '-ffp-contract=off' [-Woverriding-option],
-			# but this is exactly what we want.
-			if (EMSCRIPTEN)
+			# Clang 20 and later complain with: overriding '-ffp-model=precise' option with '-ffp-contract=off' [-Woverriding-option], but this is exactly what we want.
+			if (CMAKE_CXX_COMPILER_VERSION GREATER 19)
 				set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overriding-option")
 			endif()
 		endif()

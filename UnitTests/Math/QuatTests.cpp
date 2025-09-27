@@ -131,6 +131,9 @@ TEST_SUITE("QuatTests")
 			Vec3 r1 = m1 * rv;
 			Vec3 r2 = q1 * rv;
 			CHECK_APPROX_EQUAL(r1, r2, 1.0e-5f);
+
+			Vec3 r3 = q1.InverseRotate(r2);
+			CHECK_APPROX_EQUAL(r3, rv, 1.0e-5f);
 		}
 	}
 
@@ -485,5 +488,34 @@ TEST_SUITE("QuatTests")
 		// Check that we ignore the sign
 		Quat v3 = Quat(1, 2, 3, 4).Normalized();
 		CHECK_APPROX_EQUAL(v3.SLERP(-v3, 0.5f), v3);
+	}
+
+	TEST_CASE("TestQuatMultiplyImaginary")
+	{
+		UnitTestRandom random;
+		for (int i = 0; i < 1000; ++i)
+		{
+			Vec3 imaginary = Vec3::sRandom(random);
+			Quat quat = Quat::sRandom(random);
+
+			Quat r1 = Quat::sMultiplyImaginary(imaginary, quat);
+			Quat r2 = Quat(Vec4(imaginary, 0)) * quat;
+			CHECK_APPROX_EQUAL(r1, r2);
+		}
+	}
+
+	TEST_CASE("TestQuatCompressUnitQuat")
+	{
+		UnitTestRandom random;
+		for (int i = 0; i < 1000; ++i)
+		{
+			Quat quat = Quat::sRandom(random);
+			uint32 compressed = quat.CompressUnitQuat();
+			Quat decompressed = Quat::sDecompressUnitQuat(compressed);
+			Vec3 axis;
+			float angle;
+			(quat * decompressed.Conjugated()).GetAxisAngle(axis, angle);
+			CHECK(abs(angle) < 0.009f);
+		}
 	}
 }

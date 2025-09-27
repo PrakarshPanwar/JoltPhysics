@@ -4,6 +4,14 @@ This document lists all breaking API changes by date and by release tag. Note th
 
 Changes that make some state saved through SaveBinaryState from a prior version of the library unreadable by the new version is marked as *SBS*. See [Saving Shapes](https://jrouwe.github.io/JoltPhysics/#saving-shapes) for further information.
 
+## Changes between v5.3.0 and v5.4.0
+
+* 20240529 - *SBS* - Added `SoftBodyCreationSettings::mFacesDoubleSided` which treats the faces of the soft body as double sided. This changes the binary serialization format. (3ad037b9262ba81bf7ceda10687f2a07da38f091)
+* 20240529 - *SBS* - WheelSettingsTV and WheelSettingsWV were not serializing their base class members. This changes the binary serialization format. (cfefdc669291bd25dd168af95fb32515cc05a78b)
+* 20250523 - *SBS* - `SoftBodySharedSettings::mVertexRadius` was moved to `SoftBodyCreationSettings::mVertexRadius`, this also changes the serialization format of soft bodies. (f3d906f8c0a07a6993ecb2ff962c892a04843daa)
+* 20250505 - The remap tables in `SoftBodySharedSettings::OptimizationResults` mapped from new to old index instead of from old to new as was documented. The maps now behave as documented. (1ee6eb2f059dab839b0bde02b3c455a7bd24e533)
+* 20250505 - *SBS* - The `SoftBodySharedSettings` binary serialization format changed. (1ee6eb2f059dab839b0bde02b3c455a7bd24e533)
+
 ## Changes between v5.2.0 and v5.3.0
 
 * 20250131 - `PhysicsSettings::mManifoldToleranceSq` is no longer squared and now called `mManifoldTolerance`. `ManifoldBetweenTwoFaces` now takes `inMaxContactDistance` instead of `inMaxContactDistanceSq`. (7611a4cb33b15fcb9108794ecb6fc5090470a438)

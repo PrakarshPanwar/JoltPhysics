@@ -318,6 +318,14 @@ TEST_SUITE("Vec3Tests")
 		CHECK(Vec3(0, 2.3456f, -7.8912f).GetSign() == Vec3(1, 1, -1));
 	}
 
+	TEST_CASE("TestVec3FlipSign")
+	{
+		Vec3 v(1, 2, 3);
+		CHECK(v.FlipSign<-1, 1, 1>() == Vec3(-1, 2, 3));
+		CHECK(v.FlipSign<1, -1, 1>() == Vec3(1, -2, 3));
+		CHECK(v.FlipSign<1, 1, -1>() == Vec3(1, 2, -3));
+	}
+
 #ifdef JPH_FLOATING_POINT_EXCEPTIONS_ENABLED
 	TEST_CASE("TestVec3SyncW")
 	{
@@ -375,5 +383,18 @@ TEST_SUITE("Vec3Tests")
 	{
 		Vec3 v(1, 2, 3);
 		CHECK(ConvertToString(v) == "1, 2, 3");
+	}
+
+	TEST_CASE("TestVec3CompressUnitVector")
+	{
+		UnitTestRandom random;
+		for (int i = 0; i < 1000; ++i)
+		{
+			Vec3 v = Vec3::sRandom(random);
+			uint32 compressed = v.CompressUnitVector();
+			Vec3 decompressed = Vec3::sDecompressUnitVector(compressed);
+			float diff = (decompressed - v).Length();
+			CHECK(diff < 1.0e-4f);
+		}
 	}
 }

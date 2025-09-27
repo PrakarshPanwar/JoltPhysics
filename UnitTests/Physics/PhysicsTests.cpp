@@ -11,9 +11,17 @@
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhase.h>
 #include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/StateRecorderImpl.h>
+
+JPH_SUPPRESS_WARNINGS_STD_BEGIN
+#include <cstring>
+JPH_SUPPRESS_WARNINGS_STD_END
 
 TEST_SUITE("PhysicsTests")
 {
@@ -73,6 +81,20 @@ TEST_SUITE("PhysicsTests")
 				BodyLockRead lock1(c.GetSystem()->GetBodyLockInterface(), body1_id);
 				CHECK(lock1.Succeeded());
 				CHECK(lock1.SucceededAndIsInBroadPhase());
+
+				// Unlock automatically on going out of scope
+			}
+
+			// Check that we can lock the first box
+			{
+				BodyLockRead lock1(c.GetSystem()->GetBodyLockInterface(), body1_id);
+				CHECK(lock1.Succeeded());
+				CHECK(lock1.SucceededAndIsInBroadPhase());
+
+				// Release the lock early
+				lock1.ReleaseLock();
+				CHECK(!lock1.Succeeded());
+				CHECK(!lock1.SucceededAndIsInBroadPhase());
 			}
 
 			// Remove the first box
@@ -140,6 +162,20 @@ TEST_SUITE("PhysicsTests")
 				BodyLockMultiWrite lock(c.GetSystem()->GetBodyLockInterface(), bodies, 2);
 				CHECK(lock.GetBody(0) == &body1);
 				CHECK(lock.GetBody(1) == &body2);
+
+				// Unlock automatically on going out of scope
+			}
+
+			{
+				// Lock the bodies
+				BodyLockMultiWrite lock(c.GetSystem()->GetBodyLockInterface(), bodies, 2);
+				CHECK(lock.GetNumBodies() == 2);
+				CHECK(lock.GetBody(0) == &body1);
+				CHECK(lock.GetBody(1) == &body2);
+
+				// Release the locks early
+				lock.ReleaseLocks();
+				CHECK(lock.GetNumBodies() == 0);
 			}
 
 			// Destroy body 1
@@ -1495,6 +1531,77 @@ TEST_SUITE("PhysicsTests")
 		bi.DestroyBody(b2->GetID());
 	}
 
+	static int sStackFullMsgs = 0;
+	static int sOtherMsgs = 0;
+	static void sStackFullTrace(const char *inFMT, ...)
+	{
+		if (std::strstr(inFMT, "Stack full") != nullptr)
+			++sStackFullMsgs;
+		else
+			++sOtherMsgs;
+	}
+
+	TEST_CASE("TestAddSingleBodies")
+	{
+		PhysicsTestContext c(1.0f / 60.0f, 1, 0);
+
+		BodyInterface& bi = c.GetBodyInterface();
+		PhysicsSystem &sys = *c.GetSystem();
+
+		const int cMaxBodies = 128;
+
+		// Add individual bodies in a way that will create an inefficient broad phase and will trigger a warning on query
+		RefConst<Shape> sphere = new SphereShape(1.0f);
+		bi.CreateAndAddBody(BodyCreationSettings(sphere, RVec3::sZero(), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING), EActivation::Activate); // Leave this body
+		for (int repeat = 0; repeat < 10; ++repeat)
+		{
+			// Create cMaxBodies - 1 bodies
+			BodyIDVector body_ids;
+			for (int i = 0; i < cMaxBodies - 1; ++i)
+				body_ids.push_back(bi.CreateAndAddBody(BodyCreationSettings(sphere, RVec3::sZero(), Quat::sIdentity(), EMotionType::Dynamic, Layers::MOVING), EActivation::Activate));
+
+			// In all but the last iteration, remove the bodies again
+			if (repeat < 9)
+				for (BodyID id : body_ids)
+				{
+					bi.DeactivateBody(id);
+					bi.RemoveBody(id);
+					bi.DestroyBody(id);
+				}
+		}
+
+		// Override the trace function to count how many times we get a "Stack full" message
+		TraceFunction old_trace = Trace;
+		sStackFullMsgs = 0;
+		sOtherMsgs = 0;
+		Trace = sStackFullTrace;
+
+		// Cast a ray
+		AllHitCollisionCollector<CastRayCollector> ray_collector;
+		sys.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(-2, 0, 0), Vec3(2, 0, 0)), {}, ray_collector);
+
+		// Find colliding pairs
+		BodyIDVector active_bodies;
+		sys.GetActiveBodies(EBodyType::RigidBody, active_bodies);
+		AllHitCollisionCollector<BodyPairCollector> body_pair_collector;
+		static_cast<const BroadPhase &>(sys.GetBroadPhaseQuery()).FindCollidingPairs(active_bodies.data(), (int)active_bodies.size(), 0.0f, sys.GetObjectVsBroadPhaseLayerFilter(), sys.GetObjectLayerPairFilter(), body_pair_collector);
+
+		// Restore the old trace function
+		Trace = old_trace;
+
+		// Assert that we got a "Stack full" message when asserts are enabled
+	#ifdef JPH_ENABLE_ASSERTS
+		CHECK(sStackFullMsgs == 1);
+	#else
+		CHECK(sStackFullMsgs == 0);
+	#endif
+		CHECK(sOtherMsgs == 0);
+
+		// Assert that we hit all bodies
+		CHECK(ray_collector.mHits.size() == cMaxBodies);
+		CHECK(body_pair_collector.mHits.size() == cMaxBodies * (cMaxBodies - 1) / 2);
+	}
+
 	TEST_CASE("TestOutOfContactConstraints")
 	{
 		// Create a context with space for 8 constraints
@@ -2037,5 +2144,41 @@ TEST_SUITE("PhysicsTests")
 		CHECK(contact_listener.Contains(LoggingContactListener::EType::Remove, floor.GetID(), SubShapeID(), body_id, sub_shape_ids[0]));
 		CHECK(contact_listener.Contains(LoggingContactListener::EType::Remove, floor.GetID(), SubShapeID(), body_id, sub_shape_ids[1]));
 		CHECK(contact_listener.Contains(LoggingContactListener::EType::Remove, floor.GetID(), SubShapeID(), body_id, sub_shape_ids[2]));
+	}
+
+	// This tests that we don't run out of nodes if we keep adding removing bodies when using OptimizeBroadPhase
+	TEST_CASE("TestOptimizeBroadPhase")
+	{
+		constexpr uint cMaxBodies = 128;
+		PhysicsTestContext c(1.0f / 60.0f, 1, 0, cMaxBodies);
+		BodyInterface &bi = c.GetBodyInterface();
+
+		// Create max number of bodies
+		BodyIDVector bodies;
+		BodyCreationSettings bcs(new SphereShape(1.0f), RVec3::sZero(), Quat::sIdentity(), EMotionType::Static, Layers::MOVING);
+		for (uint i = 0; i < cMaxBodies; ++i)
+		{
+			Body *b = bi.CreateBody(bcs);
+			CHECK(b != nullptr);
+			bodies.push_back(b->GetID());
+		}
+
+		// Repeatedly add and remove bodies
+		for (int i = 0; i < 10; ++i)
+		{
+			BodyInterface::AddState add_state = bi.AddBodiesPrepare(bodies.data(), (int)bodies.size());
+			for (const BodyID &id : bodies)
+				CHECK(!bi.IsAdded(id));
+			bi.AddBodiesFinalize(bodies.data(), (int)bodies.size(), add_state, EActivation::DontActivate);
+			for (const BodyID &id : bodies)
+				CHECK(bi.IsAdded(id));
+
+			bi.RemoveBodies(bodies.data(), (int)bodies.size());
+			for (const BodyID &id : bodies)
+				CHECK(!bi.IsAdded(id));
+
+			// Optimize the broad phase to recycle quad tree nodes
+			c.GetSystem()->OptimizeBroadPhase();
+		}
 	}
 }

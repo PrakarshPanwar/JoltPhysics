@@ -161,6 +161,8 @@ set(SAMPLES_SRC_FILES
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyBendConstraintTest.h
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyContactListenerTest.cpp
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyContactListenerTest.h
+	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyCosseratRodConstraintTest.cpp
+	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyCosseratRodConstraintTest.h
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyCustomUpdateTest.cpp
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyCustomUpdateTest.h
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyForceTest.cpp
@@ -307,6 +309,8 @@ if (ENABLE_OBJECT_STREAM)
 		${SAMPLES_ROOT}/Tests/Rig/RigPileTest.h
 		${SAMPLES_ROOT}/Tests/Rig/SkeletonMapperTest.cpp
 		${SAMPLES_ROOT}/Tests/Rig/SkeletonMapperTest.h
+		${SAMPLES_ROOT}/Tests/Rig/SoftKeyframedRigTest.cpp
+		${SAMPLES_ROOT}/Tests/Rig/SoftKeyframedRigTest.h
 	)
 endif()
 
@@ -351,6 +355,7 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 
 	set_property(TARGET Samples PROPERTY MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/iOS/SamplesInfo.plist")
 	set_property(TARGET Samples PROPERTY XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.joltphysics.samples")
+	set_property(TARGET Samples PROPERTY BUILD_RPATH "/usr/local/lib" INSTALL_RPATH "/usr/local/lib") # to find the Vulkan shared lib
 else()
 	add_executable(Samples ${SAMPLES_SRC_FILES})
 endif()
