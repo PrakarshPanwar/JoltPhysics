@@ -12,5 +12,10 @@ target_include_directories(JoltLib PRIVATE
     )
 
 target_compile_definitions(JoltLib
-		PUBLIC JPH_DEBUG_RENDERER=1
+		PUBLIC JPH_DEBUG_RENDERER
+		PRIVATE JPH_USE_SSE4_1
+		PRIVATE JPH_USE_AVX
 	)
+
+# Enable SIMD flags
+target_compile_options(JoltLib PRIVATE -mavx)
