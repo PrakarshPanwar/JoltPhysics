@@ -17,5 +17,11 @@ target_compile_definitions(JoltLib
 		PRIVATE JPH_USE_AVX
 	)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+	target_compile_definitions(JoltLib
+			PRIVATE NDEBUG
+		)
+endif()
+
 # Enable SIMD flags
 target_compile_options(JoltLib PRIVATE -mavx)
