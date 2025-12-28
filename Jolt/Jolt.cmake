@@ -511,8 +511,7 @@ else()
 	target_precompile_headers(Jolt PRIVATE "$<$<NOT:$<CONFIG:ReleaseCoverage>>:${JOLT_PHYSICS_ROOT}/Jolt.h>")
 endif()
 
-# Set the debug/non-debug build flags
-target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Debug>:_DEBUG>")
+# Set the NDEBUG define for release builds
 target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Release,Distribution,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN,ReleaseCoverage>:NDEBUG>")
 
 # ASAN and TSAN should use the default allocators
@@ -560,6 +559,11 @@ endif()
 # Setting to periodically trace narrowphase stats to help determine which collision queries could be optimized
 if (TRACK_NARROWPHASE_STATS)
 	target_compile_definitions(Jolt PUBLIC JPH_TRACK_NARROWPHASE_STATS)
+endif()
+
+# Setting to track simulation timings per body
+if (JPH_TRACK_SIMULATION_STATS)
+	target_compile_definitions(Jolt PUBLIC JPH_TRACK_SIMULATION_STATS)
 endif()
 
 # Enable the debug renderer

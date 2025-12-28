@@ -2,6 +2,27 @@
 
 For breaking API changes see [this document](https://github.com/jrouwe/JoltPhysics/blob/master/Docs/APIChanges.md).
 
+## v5.5.0
+
+### New functionality
+
+* Added new define `JPH_TRACK_SIMULATION_STATS` which tracks simulation statistics on a per body basis. This can be used to figure out bodies are the most expensive to simulate.
+* Added `RagdollSettings::CalculateConstraintPriorities` which calculates constraint priorities that boost the priority of joints towards the root of the ragdoll.
+* BoxShape, CylinderShape and TaperedCylinderShape will now automatically reduce the convex radius if the specified value is too big for the shape (instead of erroring out).
+* Added ability to configure the thickness of triangles when colliding with soft bodies through `CollideSoftBodyVerticesVsTriangles::sTriangleThickness`.
+* Added `JPH_DEFAULT_ALLOCATE_ALIGNMENT` which allows defining the default `Allocate` alignment if your allocator's alignment is different from the alignment as defined by `__STDCPP_DEFAULT_NEW_ALIGNMENT__`.
+
+### Bug Fixes
+
+* Visual Studio 2026 support.
+* A 6DOF constraint that constrains all rotation axis in combination with a body that has some of its rotation axis locked would not constrain the rotation in the unlocked axis.
+* Added include `type_traits` for `std::is_trivial` to avoid compile error on macOS with clang 21.
+* Fixed compilation error when using Jolt in conjunction with the `_CRTDBG_MAP_ALLOC` define on Windows.
+* Fixed cast shape possibly not returning a hit when a shape cast starts touching (but not intersecting) another shape and requesting the deepest hit.
+* Fixed division by zero when doing a really long (6 KM) sphere cast against a triangle. In this case the floating point accuracy became low enough so that the distance between the sphere center and the triangle (which should be 'radius') became zero instead.
+* Fixed memory leak when providing invalid parameters to TaperedCylinderShapeSettings and creating the shape.
+* Fixed collision between soft body and `TriangleShape`/`MeshShape`/`HeightFieldShape`. This would not find the closest collision point in case the shape was scaled. It would also make the triangles much thicker than intended causing collisions with back facing triangles that were very far away.
+
 ## v5.4.0
 
 ### New functionality

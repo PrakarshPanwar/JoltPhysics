@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
-project(JoltPhysics VERSION 5.4.0 LANGUAGES CXX)
+project(JoltPhysics VERSION 5.5.1 LANGUAGES CXX)
 
 # When turning this option on, the library will be compiled using assertions. By default asserts are enabled in Debug build.
 option(USE_ASSERTS "Enable asserts" OFF)
@@ -77,6 +77,9 @@ option(TRACK_BROADPHASE_STATS "Track Broadphase Stats" OFF)
 
 # Setting to periodically trace narrowphase stats to help determine which collision queries could be optimized
 option(TRACK_NARROWPHASE_STATS "Track Narrowphase Stats" OFF)
+
+# Setting to track simulation timings per body
+option(JPH_TRACK_SIMULATION_STATS "Track Simulation Stats" OFF)
 
 # Enable the debug renderer in the Debug and Release builds. Note that DEBUG_RENDERER_IN_DISTRIBUTION will override this setting.
 option(DEBUG_RENDERER_IN_DEBUG_AND_RELEASE "Enable debug renderer in Debug and Release builds" ON)
