@@ -5,6 +5,7 @@ set(SAMPLES_ROOT ${PHYSICS_REPO_ROOT}/Samples)
 set(SAMPLES_SRC_FILES
 	${SAMPLES_ROOT}/Layers.h
 	${SAMPLES_ROOT}/Samples.cmake
+	${SAMPLES_ROOT}/Samples.h
 	${SAMPLES_ROOT}/SamplesApp.cpp
 	${SAMPLES_ROOT}/SamplesApp.h
 	${SAMPLES_ROOT}/Tests/BroadPhase/BroadPhaseCastRayTest.cpp
@@ -155,6 +156,12 @@ set(SAMPLES_SRC_FILES
 	${SAMPLES_ROOT}/Tests/General/WallTest.h
 	${SAMPLES_ROOT}/Tests/General/ActivateDuringUpdateTest.cpp
 	${SAMPLES_ROOT}/Tests/General/ActivateDuringUpdateTest.h
+	${SAMPLES_ROOT}/Tests/Hair/HairCollisionTest.cpp
+	${SAMPLES_ROOT}/Tests/Hair/HairCollisionTest.h
+	${SAMPLES_ROOT}/Tests/Hair/HairGravityPreloadTest.cpp
+	${SAMPLES_ROOT}/Tests/Hair/HairGravityPreloadTest.h
+	${SAMPLES_ROOT}/Tests/Hair/HairTest.cpp
+	${SAMPLES_ROOT}/Tests/Hair/HairTest.h
 	${SAMPLES_ROOT}/Tests/Rig/CreateRigTest.cpp
 	${SAMPLES_ROOT}/Tests/Rig/CreateRigTest.h
 	${SAMPLES_ROOT}/Tests/SoftBody/SoftBodyBendConstraintTest.cpp
@@ -317,6 +324,7 @@ endif()
 # Assets used by the samples
 set(SAMPLES_ASSETS
 	${PHYSICS_REPO_ROOT}/Assets/convex_hulls.bin
+	${PHYSICS_REPO_ROOT}/Assets/face.bin
 	${PHYSICS_REPO_ROOT}/Assets/heightfield1.bin
 	${PHYSICS_REPO_ROOT}/Assets/Human/dead_pose1.tof
 	${PHYSICS_REPO_ROOT}/Assets/Human/dead_pose2.tof
@@ -338,7 +346,7 @@ set(SAMPLES_ASSETS
 source_group(TREE ${SAMPLES_ROOT} FILES ${SAMPLES_SRC_FILES})
 
 # Create Samples executable
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+if (APPLE)
 	# Icon
 	set(JPH_ICON "${CMAKE_CURRENT_SOURCE_DIR}/macOS/icon.icns")
 	set_source_files_properties(${JPH_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
@@ -361,6 +369,7 @@ else()
 endif()
 target_include_directories(Samples PUBLIC ${SAMPLES_ROOT})
 target_link_libraries(Samples LINK_PUBLIC TestFramework)
+target_precompile_headers(Samples PUBLIC ${SAMPLES_ROOT}/Samples.h)
 
 # Set the correct working directory
 set_property(TARGET Samples PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${PHYSICS_REPO_ROOT}")

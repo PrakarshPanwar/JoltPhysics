@@ -10,6 +10,10 @@
 /snapshot.bin
 /*.jor
 /detlog.txt
+*.spv
+*.dxil
+*.metallib
+/Assets/*.hair
 /Assets/Shaders/VK/*.spv
 /Assets/Shaders/MTL/*.metallib
 bin

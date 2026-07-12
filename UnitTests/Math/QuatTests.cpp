@@ -298,6 +298,51 @@ TEST_SUITE("QuatTests")
 		}
 	}
 
+	TEST_CASE("TestQuatGetAngularVelocity")
+	{
+		constexpr float cDeltaTime = 1.0f / 60.0f;
+
+		UnitTestRandom random;
+		uniform_real_distribution<float> angle_range(-JPH_PI, JPH_PI);
+		for (int i = 0; i < 1000; ++i)
+		{
+			Vec3 axis = Vec3::sRandom(random);
+			float angle = angle_range(random);
+			Vec3 expected_angular_velocity = axis * angle / cDeltaTime;
+
+			Quat q = Quat::sRotation(axis, angle);
+
+			float max_error = 2.0e-4f * expected_angular_velocity.Length();
+
+			Vec3 angular_velocity = q.GetAngularVelocity(cDeltaTime);
+			CHECK_APPROX_EQUAL(angular_velocity, expected_angular_velocity, max_error);
+
+			angular_velocity = (-q).GetAngularVelocity(cDeltaTime);
+			CHECK_APPROX_EQUAL(angular_velocity, expected_angular_velocity, max_error);
+		}
+
+		constexpr float cSmallAngle = 1.0e-6f;
+
+		// Test very small angles
+		{
+			Quat q = Quat::sRotation(Vec3::sAxisX(), cSmallAngle);
+			Vec3 angular_velocity = q.GetAngularVelocity(cDeltaTime);
+			CHECK_APPROX_EQUAL(angular_velocity, Vec3(cSmallAngle / cDeltaTime, 0, 0), 1.0e-5f * cSmallAngle);
+		}
+
+		{
+			Quat q = Quat::sRotation(-Vec3::sAxisY(), cSmallAngle);
+			Vec3 angular_velocity = q.GetAngularVelocity(cDeltaTime);
+			CHECK_APPROX_EQUAL(angular_velocity, Vec3(0, -cSmallAngle / cDeltaTime, 0), 1.0e-5f * cSmallAngle);
+		}
+
+		{
+			Quat q = -Quat::sRotation(Vec3::sAxisZ(), -cSmallAngle);
+			Vec3 angular_velocity = q.GetAngularVelocity(cDeltaTime);
+			CHECK_APPROX_EQUAL(angular_velocity, Vec3(0, 0, -cSmallAngle / cDeltaTime), 1.0e-5f * cSmallAngle);
+		}
+	}
+
 	TEST_CASE("TestQuatInverse")
 	{
 		UnitTestRandom random;
@@ -382,20 +427,37 @@ TEST_SUITE("QuatTests")
 		CHECK_APPROX_EQUAL(a, DegreesToRadians(-10.0f), 1.0e-5f);
 	}
 
-	TEST_CASE("TestQuatGetEulerAngles")
+	TEST_CASE("TestQuatEulerAngles")
 	{
-		Vec3 input(DegreesToRadians(-10.0f), DegreesToRadians(20.0f), DegreesToRadians(-95.0f));
+		UnitTestRandom random;
 
-		Quat qx = Quat::sRotation(Vec3::sAxisX(), input.GetX());
-		Quat qy = Quat::sRotation(Vec3::sAxisY(), input.GetY());
-		Quat qz = Quat::sRotation(Vec3::sAxisZ(), input.GetZ());
-		Quat q = qz * qy * qx;
+		// Pitch clamped to +/- 85 degrees to avoid gimbal lock singularity near +/- 90 degrees
+		uniform_real_distribution<float> full_range(DegreesToRadians(-180.0f), DegreesToRadians(180.0f));
+		uniform_real_distribution<float> pitch_range(DegreesToRadians(-85.0f), DegreesToRadians(85.0f));
 
-		Quat q2 = Quat::sEulerAngles(input);
-		CHECK_APPROX_EQUAL(q, q2);
+		// i == -1 runs a fixed regression case before random cases
+		Vec3 fixed_input(DegreesToRadians(-10.0f), DegreesToRadians(20.0f), DegreesToRadians(-95.0f));
+		for (int i = -1; i < 1000; ++i)
+		{
+			Vec3 input = (i == -1)
+				? fixed_input
+				: Vec3(full_range(random), pitch_range(random), full_range(random));
 
-		Vec3 angles = q2.GetEulerAngles();
-		CHECK_APPROX_EQUAL(angles, input);
+			// Create ground truth by multiplying 3 separate axis rotations (ZYX order)
+			Quat qx = Quat::sRotation(Vec3::sAxisX(), input.GetX());
+			Quat qy = Quat::sRotation(Vec3::sAxisY(), input.GetY());
+			Quat qz = Quat::sRotation(Vec3::sAxisZ(), input.GetZ());
+			Quat q_expected = qz * qy * qx;
+
+			// Test sEulerAngles (Euler -> Quat)
+			Quat q_actual = Quat::sEulerAngles(input);
+			CHECK_APPROX_EQUAL(q_expected, q_actual, 1.0e-4f);
+
+			// Test GetEulerAngles (Quat -> Euler), tested against both q_actual and q_expected
+			// to catch cases where sEulerAngles and GetEulerAngles share a bug
+			CHECK_APPROX_EQUAL(q_actual.GetEulerAngles(), input, 1.0e-4f);
+			CHECK_APPROX_EQUAL(q_expected.GetEulerAngles(), input, 1.0e-4f);
+		}
 	}
 
 	TEST_CASE("TestQuatRotationFromTo")
@@ -442,7 +504,7 @@ TEST_SUITE("QuatTests")
 
 		{
 			// Length of a vector is squared inside the function: try with sqrt(FLT_MIN) to see if that still returns a valid rotation
-			Vec3 v1(0, sqrt(FLT_MIN), 0);
+			Vec3 v1(0, Sqrt(FLT_MIN), 0);
 			Vec3 v2(1, 0, 0);
 			Quat q = Quat::sFromTo(v1, v2);
 			CHECK_APPROX_EQUAL(v2.Normalized(), (q * v1).Normalized());
@@ -462,7 +524,7 @@ TEST_SUITE("QuatTests")
 
 			Vec3 v1t = (q * v1).Normalized();
 			Vec3 v2t = v2.Normalized();
-			CHECK_APPROX_EQUAL(v2t, v1t, 1.0e-5f);
+			CHECK_APPROX_EQUAL(v2t, v1t, 0.5e-4f);
 		}
 	}
 

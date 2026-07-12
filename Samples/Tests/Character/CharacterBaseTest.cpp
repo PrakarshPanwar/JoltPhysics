@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021 Jorrit Rouwe
 // SPDX-License-Identifier: MIT
 
-#include <TestFramework.h>
+#include <Samples.h>
 
 #include <Tests/Character/CharacterBaseTest.h>
 #include <Jolt/Physics/PhysicsScene.h>
@@ -21,6 +21,7 @@
 #include <Utils/Log.h>
 #include <Utils/AssetStream.h>
 #include <Renderer/DebugRendererImp.h>
+#include <Input/Keyboard.h>
 
 JPH_IMPLEMENT_RTTI_ABSTRACT(CharacterBaseTest)
 {
@@ -33,6 +34,7 @@ const char *CharacterBaseTest::sScenes[] =
 	"PerlinHeightField",
 	"ObstacleCourse",
 	"InitiallyIntersecting",
+	"InitiallyIntersecting2",
 #ifdef JPH_OBJECT_STREAM
 	"Terrain1",
 	"Terrain2",
@@ -170,6 +172,17 @@ void CharacterBaseTest::Initialize()
 					settings.mPosition = RVec3(-0.5f + 0.1f * x, 0.1f + 0.1f * y, -0.5f + 0.1f * z);
 					mBodyInterface->CreateAndAddBody(settings, EActivation::DontActivate);
 				}
+	}
+	else if (strcmp(sSceneName, "InitiallyIntersecting2") == 0)
+	{
+		CreateFloor();
+
+		// Create two very steep sloped floors that are initially intersecting with the character
+		RefConst<Shape> box = new BoxShape(Vec3(1, 0.1f, 1));
+		BodyCreationSettings settings(box, RVec3(0, 0, 0), Quat::sRotation(Vec3::sAxisZ(), DegreesToRadians(75.0f)), EMotionType::Static, Layers::NON_MOVING);
+		mBodyInterface->CreateAndAddBody(settings, EActivation::DontActivate);
+		settings.mRotation = Quat::sRotation(Vec3::sAxisZ(), DegreesToRadians(-75.0f));
+		mBodyInterface->CreateAndAddBody(settings, EActivation::DontActivate);
 	}
 	else if (strcmp(sSceneName, "ObstacleCourse") == 0)
 	{
@@ -327,6 +340,20 @@ void CharacterBaseTest::Initialize()
 		{
 			Quat rotation = Quat::sRotation(Vec3::sAxisY(), 0.5f * JPH_PI * i);
 			mBodyInterface->CreateAndAddBody(BodyCreationSettings(funnel, RVec3(10.0f, 0.1f, 5.0f) + rotation * Vec3(0.2f, 0, 0), rotation * Quat::sRotation(Vec3::sAxisZ(), -DegreesToRadians(40.0f)), EMotionType::Static, Layers::NON_MOVING), EActivation::DontActivate);
+		}
+
+		// Create mesh with a steep slope and an acute angle with triangles that face downwards
+		{
+			TriangleList triangles;
+			triangles.push_back(Triangle(Vec3(-0.5f, 0, 0), Vec3(0.5f, 0, 0), Vec3(-0.5f, 1.1f, -1)));
+			triangles.push_back(Triangle(Vec3(0.5f, 0, 0), Vec3(0.5f, 1.1f, -1), Vec3(-0.5f, 1.1f, -1)));
+			triangles.push_back(Triangle(Vec3(-0.5f, 0, 0), Vec3(-0.5f, 0, -1), Vec3(0.5f, 0, 0)));
+			triangles.push_back(Triangle(Vec3(0.5f, 0, 0), Vec3(-0.5f, 0, -1), Vec3(0.5f, 0, -1)));
+
+			MeshShapeSettings mesh(triangles);
+			mesh.SetEmbedded();
+			BodyCreationSettings body(&mesh, RVec3(12.5f, 0.5f, 4.0f), Quat::sRotation(Vec3::sAxisY(), JPH_PI), EMotionType::Static, Layers::NON_MOVING);
+			mBodyInterface->CreateAndAddBody(body, EActivation::DontActivate);
 		}
 
 		// Create small bumps
@@ -589,7 +616,7 @@ void CharacterBaseTest::Initialize()
 	{
 		// Load scene
 		Ref<PhysicsScene> scene;
-		AssetStream stream(String(sSceneName) + ".bof", std::ios::in | std::ios::binary);
+		AssetStream stream(ToLower(String(sSceneName)) + ".bof", std::ios::in | std::ios::binary);
 		if (!ObjectStreamIn::sReadObject(stream.Get(), scene))
 			FatalError("Failed to load scene");
 		scene->FixInvalidScales();
@@ -817,7 +844,8 @@ void CharacterBaseTest::DrawCharacterState(const CharacterBase *inCharacter, RMa
 	const PhysicsMaterial *ground_material = inCharacter->GetGroundMaterial();
 	Vec3 horizontal_velocity = inCharacterVelocity;
 	horizontal_velocity.SetY(0);
-	mDebugRenderer->DrawText3D(inCharacterTransform.GetTranslation(), StringFormat("State: %s\nMat: %s\nHorizontal Vel: %.1f m/s\nVertical Vel: %.1f m/s", CharacterBase::sToString(ground_state), ground_material->GetDebugName(), (double)horizontal_velocity.Length(), (double)inCharacterVelocity.GetY()), Color::sWhite, 0.25f);
+	Color color = horizontal_velocity.Length() > 1.01f * sCharacterSpeed? Color::sRed : Color::sWhite;
+	mDebugRenderer->DrawText3D(inCharacterTransform.GetTranslation(), StringFormat("State: %s\nMat: %s\nHorizontal Vel: %.1f m/s\nVertical Vel: %.1f m/s", CharacterBase::sToString(ground_state), ground_material->GetDebugName(), (double)horizontal_velocity.Length(), (double)inCharacterVelocity.GetY()), color, 0.25f);
 }
 
 void CharacterBaseTest::DrawPaddedCharacter(const Shape *inShape, float inPadding, RMat44Arg inCenterOfMass)

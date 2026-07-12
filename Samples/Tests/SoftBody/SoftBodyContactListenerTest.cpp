@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2024 Jorrit Rouwe
 // SPDX-License-Identifier: MIT
 
-#include <TestFramework.h>
+#include <Samples.h>
 
 #include <Tests/SoftBody/SoftBodyContactListenerTest.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
@@ -155,4 +155,16 @@ void SoftBodyContactListenerTest::OnSoftBodyContactAdded(const Body &inSoftBody,
 			mDebugRenderer->DrawMarker(position, Color::sRed, 0.1f);
 			mDebugRenderer->DrawArrow(position, position + normal, Color::sGreen, 0.1f);
 		}
+
+	// Draw the sensors that are in contact with the soft body
+	for (uint i = 0; i < inManifold.GetNumSensorContacts(); ++i)
+	{
+		BodyID sensor_id = inManifold.GetSensorContactBodyID(i);
+		BodyLockRead lock(mPhysicsSystem->GetBodyLockInterfaceNoLock(), sensor_id); // Can't lock in a callback
+		if (lock.SucceededAndIsInBroadPhase())
+		{
+			AABox bounds = lock.GetBody().GetWorldSpaceBounds();
+			DebugRenderer::sInstance->DrawWireBox(bounds, Color::sGreen);
+		}
+	}
 }
