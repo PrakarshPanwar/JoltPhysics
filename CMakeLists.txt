@@ -13,15 +13,20 @@ target_include_directories(JoltLib PRIVATE
 
 target_compile_definitions(JoltLib
 		PUBLIC JPH_DEBUG_RENDERER
-		PRIVATE JPH_USE_SSE4_1
-		PRIVATE JPH_USE_AVX
 	)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+	target_compile_definitions(JoltLib
+			PRIVATE JPH_USE_SSE4_1
+			PRIVATE JPH_USE_AVX
+		)
+
+	# SIMD flags
+	target_compile_options(JoltLib PRIVATE -mavx)
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
 	target_compile_definitions(JoltLib
 			PRIVATE NDEBUG
 		)
 endif()
-
-# Enable SIMD flags
-target_compile_options(JoltLib PRIVATE -mavx)
